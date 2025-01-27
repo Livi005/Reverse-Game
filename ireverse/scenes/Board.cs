@@ -11,6 +11,8 @@ public partial class Board : Node2D
 	private static int GameMode = 0;
 	private static int Winner = 0;
 	private static int Score = 0;
+	private static bool AIPlayed = false;
+
 	
 	private static StreamWriter swStart;
 
@@ -31,14 +33,39 @@ public partial class Board : Node2D
 	public override void _Process(double delta)
 	{
 		if (started)
-		{
+		{	if(GameMode == 1 && PlayerTurn == 2 && AnswerReady)
+			{
+                try
+                {
+                    swIn = new StreamWriter("../ireverse/in.txt");
+                    swIn.WriteLine("1" + PlayerTurn + "00");
+                    swIn.Close();
+                    swIn = null;
+                    AnswerReady = false;
+					AIPlayed = true;
+                }
+                catch (Exception ex)
+                {
+                }   
+            }
+
 			if (!AnswerReady)
-			{	
-				srOut = new StreamReader("../ireverse/out.txt");
-                string line = srOut.ReadLine();
-				srOut.Close();
-				srOut = null;
-				GD.Print(line);
+			{
+				string line = string.Empty;
+                try
+                {
+                    srOut = new StreamReader("../ireverse/out.txt");
+                    line = srOut.ReadLine();
+                    srOut.Close();
+                    srOut = null;
+                }
+                catch (Exception ex)
+                {
+                   
+                }
+
+                
+				
 				string matrixLine = string.Empty;
 				bool firstReaded = false;
 
@@ -49,11 +76,69 @@ public partial class Board : Node2D
 						if (a == '1')
 						{
 							firstReaded = true;
-						}
+							GetNode<TextEdit>("../board/info").Hide();
+                            GD.Print(line);
+                        }
 						else if (a == '0')
 						{
 							break;
-						}
+						}else if(a == '2')
+						{
+                            GetNode<TextEdit>("../board/info").Text = "Opcion no valida";
+							GetNode<AudioStreamPlayer2D>("../board/wrongSound").Play();
+                            GetNode<TextEdit>("../board/info").Show();
+                            GD.Print(line);
+                            try
+                            {
+                                swOut = new StreamWriter("../ireverse/out.txt");
+                                swOut.WriteLine("0");
+                                swOut.Close();
+                                swOut = null;
+                                AnswerReady = true;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+                            
+                            break;
+                        }else if(a == '3')
+						{
+                            GD.Print(line);
+                            try
+                            {
+                                swOut = new StreamWriter("../ireverse/out.txt");
+                                swOut.WriteLine("0");
+                                swOut.Close();
+                                swOut = null;
+                                AnswerReady = true;
+                            }
+                            catch (Exception ex)
+                            {
+                            }
+							GetNode<TextEdit>("info").Text = "El jugador " + PlayerTurn + " pasa turno.";
+							GetNode<TextEdit>("info").Show();
+                            if (PlayerTurn == 1)
+                            {
+                                PlayerTurn = 2;
+                                Image image = new Image();
+                                ImageTexture Photo = new ImageTexture();
+                                image.Load(@"../ireverse/images/board2.png");
+                                Photo = ImageTexture.CreateFromImage(image);
+								GetNode<Sprite2D>("boradBackground").Texture = Photo;
+                            }
+                            else
+                            {
+                                PlayerTurn = 1;
+                                Image image = new Image();
+                                ImageTexture Photo = new ImageTexture();
+                                image.Load(@"../ireverse/images/board.png");
+                                Photo = ImageTexture.CreateFromImage(image);
+                                GetNode<Sprite2D>("boradBackground").Texture = Photo;
+                            }
+
+
+                            break;
+                        }
 					}
 					else if (firstReaded)
 					{
@@ -63,6 +148,11 @@ public partial class Board : Node2D
 				if (firstReaded)
 				{
 					int c = 0;
+					if(AIPlayed)
+					{
+						GetNode<AudioStreamPlayer2D>("../board/tileSound").Play();
+						AIPlayed = false;
+					}
 					foreach (char a in matrixLine)
 					{
 
@@ -84,57 +174,78 @@ public partial class Board : Node2D
 						GetNode<Button>("b" + c).SetButtonIcon(Photo);
 						c++;
 					}
-					if (GameMode != 1)
+					
+					if (PlayerTurn == 1)
 					{
-						if (PlayerTurn == 1)
-						{
-							PlayerTurn = 2;
-						}
-						else
-						{
-							PlayerTurn = 1;
-						}
+                        Image image = new Image();
+                        ImageTexture Photo = new ImageTexture();
+                        image.Load(@"../ireverse/images/board2.png");
+                        Photo = ImageTexture.CreateFromImage(image);
+                        GetNode<Sprite2D>("boradBackground").Texture = Photo;
+                        PlayerTurn = 2;
 					}
-
+					else
+					{
+                        Image image = new Image();
+                        ImageTexture Photo = new ImageTexture();
+                        image.Load(@"../ireverse/images/board.png");
+                        Photo = ImageTexture.CreateFromImage(image);
+                        GetNode<Sprite2D>("boradBackground").Texture = Photo;
+                        PlayerTurn = 1;
+					}
                     swOut = new StreamWriter("../ireverse/out.txt");
                     swOut.WriteLine("0");
                     swOut.Close();
                     swOut = null;
-                    AnswerReady = true;
-				}
-				srEnd = new StreamReader("../ireverse/end.txt");
-				string end = srEnd.ReadToEnd();
-				srEnd.Close();
-				srEnd = null;
-				bool first = false;
-				bool second = false;
-				string score = string.Empty;
-				foreach (char a in end)
-				{
-					if (a == 1 && !first)
-					{
-						first = true;
-					} else if (a == 2 && !second && first)
-					{
-						second = true;
-						Winner = int.Parse(a.ToString());
-					}
-					else if (first && second)
-					{
-						score += a;
-					}
-				}
-				if (first)
-				{
-					swEnd = new StreamWriter("../ireverse/end.txt");
-					swEnd.WriteLine("0");
-					swEnd.Close();
-					swEnd = null;
-					Score = int.Parse(score);
-					EndGame();
+                    AnswerReady = true;     
 				}
 			}
-		}
+            string end = string.Empty;
+            try
+            {
+                srEnd = new StreamReader("../ireverse/end.txt");
+                end = srEnd.ReadLine();
+                srEnd.Close();
+                srEnd = null;
+            }
+            catch (Exception ex)
+            {
+            }
+
+            bool first = false;
+            bool second = false;
+            string score = string.Empty;
+            foreach (char a in end)
+            {
+                
+                if (int.Parse(a.ToString()) == 1 && !first)
+                {
+                 
+                    first = true;
+                }
+                else if (!second && first)
+                {
+                  
+                    second = true;
+                    Winner = int.Parse(a.ToString());
+                }
+                else if (first && second)
+                {
+               
+                    score += a;
+                }
+            }
+            if (first)
+            {
+              
+                swEnd = new StreamWriter("../ireverse/end.txt");
+                swEnd.WriteLine("0");
+                swEnd.Close();
+                swEnd = null;
+                Score = int.Parse(score);
+                EndGame();
+            }
+        }
 		else
 		{
 			if (GetNode<OptionButton>("../menu/GameModeButton").Selected == 1)
@@ -147,20 +258,43 @@ public partial class Board : Node2D
 			}
 
 		}
-	}
+
+        
+		
+    }
 		public void ButtonManager(int i)
-		{
+		{	
 			if (AnswerReady) 
 			{
-				swIn = new StreamWriter("../ireverse/in.txt");
-				swIn.WriteLine("1" + PlayerTurn + GetX(i) + GetY(i));
-				swIn.Close();
-				swIn = null;
-				AnswerReady = false;
+				bool worked = true;
+				try
+				{
+					swIn = new StreamWriter("../ireverse/in.txt");
+					swIn.WriteLine("1" + PlayerTurn + GetX(i) + GetY(i));
+					GD.Print(GetX(i), GetY(i));
+					swIn.Close();
+					swIn = null;
+					AnswerReady = false;
+				}
+				catch (Exception ex)
+				{
+					worked = false;
+				}
+				if(!worked)
+				{
+					ButtonManager(i);
+				}
+				
+				GetNode<AudioStreamPlayer2D>("../board/tileSound").Play();
+				
+				
+
 			}
 		}
+		
 		private void StartGame()
 		{
+			GetNode<AudioStreamPlayer2D>("../buttonSound").Play();
 			swStart = new StreamWriter("../ireverse/start.txt");
 			swStart.WriteLine("1" + GameMode + Difficulty);
 			swStart.Close();
@@ -170,43 +304,103 @@ public partial class Board : Node2D
 		private void EndGame()
 		{
 			started = false;
-			GetNode<Node2D>("../board").Hide();
-			GetNode<TextEdit>("../winScreen/winner").Text = "Player " + Winner + " has won!";
-			GetNode<TextEdit>("../winScreen/winner").Text = "Score: " + Score + ".";
+			if(Winner != 3)
+			{
+				GetNode<TextEdit>("../winScreen/winbackground/winner").Text = "Player " + Winner + " has won!";
+				if(Winner == 1)
+				{
+					GetNode<AudioStreamPlayer2D>("../winScreen/winSound").Play();
+				}
+				else
+				{
+					GetNode<AudioStreamPlayer2D>("../winScreen/defeatSound").Play();
+				}
+			}
+			else
+			{
+				GetNode<TextEdit>("../winScreen/winner").Text = "Draw";
+				GetNode<AudioStreamPlayer2D>("../winScreen/drawSound").Play();
+
+			}
+			
+			GetNode<TextEdit>("../winScreen/winbackground/score").Text = "Score: " + Score + ".";
 			GetNode<Node2D>("../winScreen").Show();
 		}
 		private int GetX(int x) {
-			while (x > 7) {
-				x = -8;
-			}
-			return x;
+			
+			return x / 8;
 		}
 
 		private int GetY(int y) {
-			return y / 8;
+			while (y > 7)
+			{
+				y+= -8;
+			}
+			return y;
+		}
+		
+		private void _on_back_button_pressed()
+		{
+			try
+			{
+				swIn = new StreamWriter("../ireverse/in.txt");
+				swIn.WriteLine("2");
+
+				swIn.Close();
+				swIn = null;
+				EndGame();
+			}
+			catch
+			{
+				_on_back_button_pressed();
+			}
+			
+			
 		}
 
-
-		private void _on_play_again_button_pressed()
+        private void _on_play_again_button_pressed()
 		{
+			GetNode<AudioStreamPlayer2D>("../buttonSound").Play();
+			started = false;
 			Winner = 0;
 			Score = 0;
 			PlayerTurn = 1;
-			GameMode = -1;
+			GameMode = 0;
 			AnswerReady = true;
 			Image image = new Image();
-			image.Load(@"../ireverse/images/blank.png");
-			ImageTexture Photo = ImageTexture.CreateFromImage(image);
+			ImageTexture Photo = new ImageTexture();
 			for (int i = 0; i < 64; i++)
-			{
-				GetNode<Button>("b" + i).SetButtonIcon(Photo);
+			{	
+				if(i == 27 || i == 36)
+				{
+					image.Load(@"../ireverse/images/blue.png");
+					Photo = ImageTexture.CreateFromImage(image);
+					GetNode<Button>("b" + i).SetButtonIcon(Photo);
+				
+				}
+				else if(i == 28 || i == 35)
+				{
+					image.Load(@"../ireverse/images/red.png");
+					Photo = ImageTexture.CreateFromImage(image);
+					GetNode<Button>("b" + i).SetButtonIcon(Photo);
+					
+				}
+				else
+				{
+					image.Load(@"../ireverse/images/blank.png");
+					Photo = ImageTexture.CreateFromImage(image);
+					GetNode<Button>("b" + i).SetButtonIcon(Photo);
+				}
+				
 			}
-
+			GetNode<Node2D>("../board").Hide();
+			GetNode<Node2D>("../winScreen").Hide();
+			GetNode<Node2D>("../menu").Show();
 		}
 
 		private void _on_start_button_pressed()
 		{
-
+			GetNode<AudioStreamPlayer2D>("../buttonSound").Play();
 			GameMode = GetNode<OptionButton>("../menu/GameModeButton").Selected;
 			if (GameMode == 0)
 			{

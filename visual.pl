@@ -1,4 +1,6 @@
 :- ensure_loaded('tablero.pl').
+:- ensure_loaded('juego.pl').
+
 leer_start(Opcion, Dificultad):- 
     open('ireverse/start.txt', read, StreamIn),         
     read_line_to_string(StreamIn, Line),      
@@ -16,29 +18,47 @@ leer_in(Jugador, X, Y) :-
     read_line_to_string(StreamIn, Line),      
     close(StreamIn),     
 
-    sub_string(Line, 0, 1, _, "1"),   
-    sub_string(Line, 1, 1, _, Jugador_txt),
-    sub_string(Line, 2, 1, _, X_txt),         
-    sub_string(Line, 3, 1, _, Y_txt),  
+    (
+        sub_string(Line, 0, 1, _, "1")
+    ->
+        sub_string(Line, 1, 1, _, Jugador_txt),
+        sub_string(Line, 2, 1, _, X_txt),         
+        sub_string(Line, 3, 1, _, Y_txt),  
     
-    number_string(Jugador, Jugador_txt),  
-    number_string(X, X_txt),                  
-    number_string(Y, Y_txt).            
+        number_string(Jugador, Jugador_txt),  
+        number_string(X, X_txt),                  
+        number_string(Y, Y_txt)
+    ;
+        sub_string(Line, 0, 1, _, "2")
+    ->
+        poner_ceroI(),
+        inicio()
+    ).            
 
 escribir_out(Matriz, Error) :-
     write('transformar la matriz'), nl,
     transformar_tablero(Matriz, Matriz_Out),
     imprimir_tablero(Matriz_Out),
-    open('ireverse/out.txt', write, Stream),
-    (
-        Error == 0
-    ->
-        write(Stream, '1')
-    ;
-        write(Stream, '2')
-    ),
-    escribir_matriz(Stream, Matriz_Out),
-    close(Stream).
+
+    (   catch(open('ireverse/out.txt', write, Stream), 
+               E, 
+               (   
+                    write('Error al abrir el archivo: '), 
+                    write(E), nl, 
+                    fail
+                ))  
+    ->  % Si la apertura fue exitosa
+        (   Error == 0
+        ->  write(Stream, '1')
+        ;   
+            write(Stream, '2')
+        ),
+        escribir_matriz(Stream, Matriz_Out),
+        close(Stream)
+    ;   % Si no se pudo abrir el archivo
+        write('No se pudo abrir el archivo.'), nl
+    ).
+
 
 escribir_matriz(_, []) :- !.  % Cuando no hay más filas, termina.
 escribir_matriz(Stream, [Fila|Resto]) :-
@@ -71,7 +91,7 @@ reemplazar_fila([white | Resto], [2 | RestoReemplazado]) :-
 
 
 escribir_end(Jugador, Puntuacion) :-
-    open('ireverse/end.txt', write, StreamIn),
+    open('ireverse/end.txt', write, Stream),
     write(Stream, '1'),  % Comienza con un 1 para indicar que es una respuesta válida
     write(Stream, Jugador),
     write(Stream, Puntuacion),
